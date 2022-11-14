@@ -1,3 +1,9 @@
+# I have no intention _(at the moment)_ of creating an awesome README file. Hence I leave it as it is by default.
+
+## The main idea is just to showcase my project. Hope you'll find it exciting! :)
+
+---
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
