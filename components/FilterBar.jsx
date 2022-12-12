@@ -1,31 +1,60 @@
-import { Box, Flex, Select, useColorModeValue } from '@chakra-ui/react';
-import { useRouter } from 'next/router';
-import React, { useEffect, useRef, useState } from 'react';
+import _ from 'lodash';
+import {
+  Box,
+  Drawer,
+  Flex,
+  Select,
+  useColorModeValue,
+  useDisclosure,
+  DrawerContent,
+  IconButton,
+  Icon,
+} from '@chakra-ui/react';
+import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { filterData, getFilterValues } from '../utils/filterData';
+import { fetchFiltersRequest, baseUrl } from '../utils/fetchFiltersRequest';
 
-const FilterBar = () => {
+const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const [filters] = useState(filterData);
-  const [topPos, setTopPos] = useState(-8);
+  const [params, setParams] = useState({
+    locationExternalIDs: '5002',
+  });
   const [currentScrollPos, setCurrentScrollPos] = useState(null);
   const [windowHeight, setWindowHeight] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [hideFilters, setHideFilters] = useState(false);
-  const bg = useColorModeValue('white', 'gray.800');
-  const filterBarRef = useRef(null);
-  const router = useRouter();
-  const searchProperties = (filterValues) => {
-    const path = router.pathname;
-    const { query } = router;
+  const [closedWithBtn, setClosedWithBtn] = useState(false);
 
+  const bg = useColorModeValue('white', 'gray.800');
+
+  // debounce function
+  let filterTimeout;
+  const debounceFilter = (params) => {
+    clearTimeout(filterTimeout);
+
+    filterTimeout = setTimeout(() => {
+      setApplyFiltersAndScroll(true);
+      requestProperties(params);
+    }, 2000);
+  };
+
+  const searchProperties = async (filterValues) => {
     const values = getFilterValues(filterValues);
 
     values.forEach((item) => {
       if (item.value && filterValues?.[item.name]) {
-        query[item.name] = item.value;
+        params[item.name] = item.value;
+        setParams({ [item.name]: item.value, ...params });
       }
     });
+    debounceFilter(params);
+  };
 
-    router.push({ pathname: path, query: query });
+  const requestProperties = async (params) => {
+    setLoading(true);
+    const { hits: properties } = await fetchFiltersRequest(baseUrl, params);
+    setLoading(false);
+    setProperties(properties);
   };
 
   if (typeof window !== 'undefined') {
@@ -35,85 +64,110 @@ const FilterBar = () => {
     };
   }
 
-  function showFiltersBar() {
-    setTopPos((topPos += 0.5));
-    filterBarRef.current.style.top = `${topPos}rem`;
-    topPos < 0 && requestAnimationFrame(showFiltersBar);
-  }
-
-  function hideFiltersBar() {
-    setTopPos((topPos -= 0.5));
-    filterBarRef.current.style.top = `${topPos}rem`;
-    topPos > -8 && requestAnimationFrame(hideFiltersBar);
-  }
-
   useEffect(() => {
-    if (showFilters) {
-      console.log('show filters');
-      requestAnimationFrame(showFiltersBar);
-    } else if (hideFilters) {
-      console.log('hide filters');
-      requestAnimationFrame(hideFiltersBar);
-    }
-  }, [showFilters, hideFilters]);
-
-  useEffect(() => {
-    const showFiltersNew = currentScrollPos > windowHeight * 0.81;
-    if (showFiltersNew != showFilters) {
-      setShowFilters(showFiltersNew);
-    }
-    const hideFiltersNew = currentScrollPos < windowHeight * 0.81;
-    if (hideFiltersNew != hideFilters) {
-      setHideFilters(hideFiltersNew);
+    if (
+      currentScrollPos > windowHeight * 0.5 &&
+      currentScrollPos < windowHeight * 0.8
+    ) {
+      if (!closedWithBtn && !isOpen) {
+        onOpen();
+      }
+    } else if (
+      currentScrollPos < windowHeight * 0.5 &&
+      currentScrollPos > windowHeight * 0.2
+    ) {
+      isOpen && onClose();
+      setClosedWithBtn(false);
     }
   }, [currentScrollPos]);
 
   useEffect(() => {
-    const windowHeight = window.innerHeight;
-    setWindowHeight(windowHeight);
-    filterBarRef.current.style.top = `${topPos}rem`;
+    setWindowHeight(window.innerHeight);
+    // default filtering
+    requestProperties(params);
   }, []);
 
+  const toggleDrawerBtn = (
+    <IconButton
+      aria-label='Toggle filters'
+      icon={
+        <Icon
+          height={8}
+          width={8}
+          as={isOpen ? TriangleUpIcon : TriangleDownIcon}
+        />
+      }
+      pos={'fixed'}
+      top={5}
+      right={5}
+      variant={'ghost'}
+      zIndex={10}
+      onClick={() => {
+        isOpen && setClosedWithBtn(true);
+        isOpen ? onClose() : onOpen();
+      }}
+    />
+  );
+
   return (
-    <Box ref={filterBarRef} pos={'fixed'} zIndex={'5'}>
-      <Flex
-        bg={useColorModeValue(
-          'rgba(255, 255, 255, 0.65)',
-          'rgba(26, 32, 44, 0.65)'
-        )}
-        color={useColorModeValue('gray.600', 'white')}
-        flexWrap={'wrap'}
-        justifyContent={'center'}
-        minH={'60px'}
-        py={{ base: 2 }}
-        px={{ base: 4, md: 24, lg: 40 }}
-        borderBottom={1}
-        borderStyle={'solid'}
-        borderColor={useColorModeValue('gray.200', 'gray.900')}
-        align={'center'}
+    <>
+      {!isOpen && currentScrollPos > windowHeight * 0.5 && toggleDrawerBtn}
+      <Drawer
+        placement='top'
+        isOpen={isOpen}
+        onClose={onClose}
+        pos={'fixed'}
+        // allowPinchZoom={true}
+        // returnFocusOnClose={false}
+        blockScrollOnMount={false}
+        // closeOnOverlayClick={false}
+        // isFullHeight={false}
+        // trapFocus={false}
       >
-        {filters?.map((filter) => (
-          <Box key={filter.queryName}>
-            <Select
-              bg={bg}
-              onChange={(e) =>
-                searchProperties({ [filter.queryName]: e.target.value })
-              }
-              placeholder={filter.placeholder}
-              w='fit-content'
-              p='2'
-            >
-              {filter?.items?.map((item) => (
-                <option value={item.value} key={item.value}>
-                  {item.name}
-                </option>
-              ))}
-            </Select>
-          </Box>
-        ))}
-      </Flex>
-    </Box>
+        <DrawerContent>
+          {isOpen && toggleDrawerBtn}
+          <Flex
+            color={useColorModeValue('gray.600', 'white')}
+            flexWrap={'wrap'}
+            justifyContent={'center'}
+            minH={'60px'}
+            py={{ base: 2 }}
+            px={{ base: 4, md: 24, lg: 40 }}
+            borderBottom={1}
+            borderStyle={'solid'}
+            borderColor={useColorModeValue('gray.200', 'gray.900')}
+            align={'center'}
+          >
+            {filters?.map((filter) => (
+              <Box key={filter.queryName}>
+                <Select
+                  bg={bg}
+                  onChange={(e) => {
+                    searchProperties({ [filter.queryName]: e.target.value });
+                  }}
+                  placeholder={filter.placeholder}
+                  w='fit-content'
+                  p='2'
+                >
+                  {filter?.items?.map((item) => (
+                    <option
+                      value={item.value}
+                      selected={
+                        params[filter.queryName] == item.value ? true : false
+                      }
+                      key={item.value}
+                    >
+                      {item.name}
+                    </option>
+                  ))}
+                </Select>
+              </Box>
+            ))}
+          </Flex>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 };
 
-export default FilterBar;
+export default React.memo(FilterBar);

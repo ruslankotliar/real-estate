@@ -26,30 +26,41 @@ import {
   ModalBody,
   ModalFooter,
   Modal,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from '@chakra-ui/react';
+import { useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { HamburgerIcon, CloseIcon, MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 
-export default function Header() {
+function Header() {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const { route } = router;
+  const { route, query } = router;
   const [regData, setRegData] = useState(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
   const { colorMode, toggleColorMode } = useColorMode();
 
-  const logOut = () => {
+  const logOut = async () => {
+    await signOut();
     setModalIsOpen(false);
-    localStorage.removeItem('regData');
-    window.location = '/';
+    router.push('/');
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('regData');
-    const initialValue = JSON.parse(saved);
-    setRegData(initialValue || null);
-  }, []);
+    if (status === 'authenticated') {
+      setRegData(session);
+    }
+    console.log(session);
+  }, [session]);
 
   const switchMode = (
     <Button
@@ -67,33 +78,23 @@ export default function Header() {
       direction={'row'}
       spacing={6}
     >
-      <Menu>
-        <MenuButton
-          as={Button}
-          rounded={'full'}
-          variant={'link'}
-          cursor={'pointer'}
-          minW={0}
-        >
-          <Avatar
-            size={'sm'}
-            src={
-              'https://images.unsplash.com/photo-1493666438817-866a91353ca9?ixlib=rb-0.3.5&q=80&fm=jpg&crop=faces&fit=crop&h=200&w=200&s=b616b2c5b373a80ffc9636ba24f7a4a9'
-            }
-          />
-        </MenuButton>
-        <MenuList>
-          <MenuItem>My profile</MenuItem>
-          <MenuDivider />
-          <MenuItem
-            _active={false}
-            _focus={{
-              cursor: 'default',
-            }}
+      <Box>
+        <Menu>
+          <MenuButton
+            as={Button}
+            rounded={'full'}
+            variant={'link'}
+            cursor={'pointer'}
+            minW={0}
           >
+            <Avatar size={'sm'} src={session?.user.fileURL || null} />
+          </MenuButton>
+          <MenuList>
+            <MenuItem>My profile</MenuItem>
+            <MenuDivider />
             <Button
+              ml={3}
               onClick={() => setModalIsOpen(true)}
-              // onClick={logOut}
               fontSize={'sm'}
               fontWeight={600}
               color={'white'}
@@ -104,9 +105,9 @@ export default function Header() {
             >
               Log out
             </Button>
-          </MenuItem>
-        </MenuList>
-      </Menu>
+          </MenuList>
+        </Menu>
+      </Box>
       {switchMode}
     </Stack>
   );
@@ -123,7 +124,7 @@ export default function Header() {
         fontSize={'sm'}
         fontWeight={400}
         variant={'link'}
-        href='sign-in'
+        href='/auth/sign-in'
       >
         Sign In
       </Button>
@@ -142,7 +143,7 @@ export default function Header() {
           _hover={{
             textDecoration: 'none',
           }}
-          href='/sign-up'
+          href='/auth/sign-up'
         >
           Sign Up
         </Link>
@@ -152,26 +153,23 @@ export default function Header() {
   );
 
   const modal = (
-    <Modal isOpen={modalIsOpen} onClose={() => setModalIsOpen(false)}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Confirmation</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>Sure want to log out?</ModalBody>
-        <ModalFooter>
-          <Button
-            colorScheme='blue'
-            mr={3}
-            onClick={() => setModalIsOpen(false)}
-          >
-            No
-          </Button>
-          <Button onClick={logOut} variant='ghost'>
-            Yes
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <AlertDialog isOpen={modalIsOpen} onClose={() => setModalIsOpen(false)}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader>Confirmation</AlertDialogHeader>
+          <ModalCloseButton />
+          <AlertDialogBody>Sure want to log out?</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button mr={3} onClick={() => setModalIsOpen(false)}>
+              No
+            </Button>
+            <Button onClick={logOut} colorScheme='red'>
+              Yes
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
   );
 
   return (
@@ -215,23 +213,29 @@ export default function Header() {
             DubaiRealtor
           </Link>
           <Flex display={{ base: 'none', md: 'flex' }} ml={10}>
-            <DesktopNav route={route} />
+            <DesktopNav router={router} route={route} query={query} />
           </Flex>
         </Flex>
         {regData ? avatar : registration}
       </Flex>
 
       <Collapse in={isOpen} animateOpacity>
-        <MobileNav route={route} />
+        <MobileNav router={router} route={route} query={query} />
       </Collapse>
       {modal}
     </Box>
   );
 }
 
-const DesktopNav = ({ route }) => {
+const DesktopNav = ({ query, router }) => {
+  const path = router.pathname;
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
+
+  const setPurpose = (purpose) => {
+    query['purpose'] = purpose;
+    router.push({ pathname: path, query: query });
+  };
 
   return (
     <Stack direction={'row'} spacing={4}>
@@ -239,22 +243,21 @@ const DesktopNav = ({ route }) => {
         <Box key={navItem.label}>
           <Popover trigger={'hover'} placement={'bottom-start'}>
             <PopoverTrigger>
-              <Link
-                p={2}
-                href={navItem.href[0] ?? '#'}
+              <Button
+                variant={'link'}
+                p={'0'}
+                onClick={() => setPurpose(navItem.purpose)}
                 fontSize={'sm'}
                 fontWeight={'500'}
                 color={linkColor}
-                textDecoration={
-                  navItem.href.some((href) => href == route) && 'underline'
-                }
+                textDecoration={navItem.purpose == query.purpose && 'underline'}
                 _hover={{
                   textDecoration: 'none',
                   color: linkHoverColor,
                 }}
               >
                 {navItem.label}
-              </Link>
+              </Button>
             </PopoverTrigger>
           </Popover>
         </Box>
@@ -263,8 +266,13 @@ const DesktopNav = ({ route }) => {
   );
 };
 
-const MobileNav = ({ route }) => {
+const MobileNav = ({ query, router }) => {
+  const path = router.pathname;
   const { colorMode, toggleColorMode } = useColorMode();
+  const setPurpose = function (purpose) {
+    query['purpose'] = purpose;
+    router.push({ pathname: path, query: query });
+  };
   return (
     <Stack
       bg={useColorModeValue('white', 'gray.800')}
@@ -272,7 +280,12 @@ const MobileNav = ({ route }) => {
       display={{ md: 'none' }}
     >
       {NAV_ITEMS.map((navItem) => (
-        <MobileNavItem route={route} key={navItem.label} {...navItem} />
+        <MobileNavItem
+          setPurpose={setPurpose}
+          query={query}
+          key={navItem.label}
+          {...navItem}
+        />
       ))}
       <Button onClick={toggleColorMode}>
         {colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
@@ -281,14 +294,15 @@ const MobileNav = ({ route }) => {
   );
 };
 
-const MobileNavItem = ({ route, label, href }) => {
+const MobileNavItem = ({ query, label, purpose, setPurpose }) => {
   return (
     <Stack spacing={4}>
       <Flex
         py={2}
-        as={Link}
-        href={href ?? '#'}
-        textDecoration={route === href && 'underline'}
+        as={Button}
+        variant={'link'}
+        onClick={() => setPurpose(purpose)}
+        textDecoration={query.purpose === purpose && 'underline'}
         justify={'space-between'}
         align={'center'}
         _hover={{
@@ -309,10 +323,12 @@ const MobileNavItem = ({ route, label, href }) => {
 const NAV_ITEMS = [
   {
     label: 'Buy',
-    href: ['/for-sale', '/'],
+    purpose: 'for-sale',
   },
   {
     label: 'Rent',
-    href: ['/for-rent'],
+    purpose: 'for-rent',
   },
 ];
+
+export default Header;

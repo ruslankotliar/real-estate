@@ -1,7 +1,7 @@
 import { ReactNotifications } from 'react-notifications-component';
 import { Store } from 'react-notifications-component';
 import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/router';
+import { signIn } from 'next-auth/react';
 import {
   Flex,
   Box,
@@ -19,30 +19,29 @@ import {
   InputRightElement,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
-import UploadFile from './UploadFile';
+import { useRouter } from 'next/router';
 import LoadingStatus from './LoadingStatus';
 
-export default function SignUp() {
+export default function SignIn() {
   const router = useRouter();
   const [show, setShow] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
   const [notification, setNotification] = useState({
     insert: 'top',
     container: 'top-center',
     animationIn: ['animate__animated', 'animate__fadeIn'],
     animationOut: ['animate__animated', 'animate__fadeOut'],
     dismiss: {
-      duration: 2000,
+      duration: 3000,
       onScreen: true,
     },
   });
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm({ mode: 'all' });
 
   const resetForm = () => {
     reset(
@@ -54,73 +53,41 @@ export default function SignUp() {
     );
   };
 
-  const onUploadFile = async (file) => {
-    if (!file) {
-      return;
-    }
-
+  const onSubmit = async (data) => {
     try {
-      let formData = new FormData();
-      formData.append('media', file);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      setLoading(true);
+      const { email, password } = data;
+      const res = await signIn('credentials', {
+        email: email,
+        password: password,
+        redirect: false,
       });
 
-      const { fileURL, error } = await res.json();
-
-      if (!res.ok) {
-        setLoading(false);
-        console.log(error || 'Sorry! something went wrong.');
-        return;
-      }
-
-      console.log('File was uploaded successfully:', fileURL);
-
-      return fileURL;
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const signUpUser = async (regData) => {
-    try {
-      const { email, password, file } = regData;
-      const fileURL = await onUploadFile(file[0]);
-      const data = { email, password, fileURL };
-      const res = await fetch('/api/sign-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
       setLoading(false);
-      // Throw error with status code in case Fetch API req failed
+
       if (!res.ok) {
         throw new Error(res.status);
       } else {
+        resetForm();
         Store.addNotification({
-          title: 'Registration complete!',
-          message: `Welcome, ${regData.email}!`,
+          title: 'Success!',
+          message: `Welcome, ${data.email}!`,
           type: 'success',
           ...notification,
         });
-      }
 
-      setTimeout(() => {
-        if (rememberMe) {
+        setTimeout(() => {
           router.push('/');
-        } else {
-          router.push('/auth/sign-in');
-        }
-      }, 2500);
-
-      resetForm();
+        }, 3500);
+      }
     } catch (e) {
-      if (e.message == '409') {
+      console.log(e.message);
+
+      if (e.message == '401') {
+        console.log('fasdf');
         Store.addNotification({
-          title: `${regData.email} already exists.`,
-          message: 'Choose another email address.',
+          title: 'Invalid credentials!',
+          message: `Try again, please.`,
           type: 'danger',
           ...notification,
         });
@@ -132,13 +99,7 @@ export default function SignUp() {
           ...notification,
         });
       }
-      console.error(e);
     }
-  };
-
-  const onSubmit = (regData) => {
-    setLoading(true);
-    signUpUser(regData);
   };
 
   useEffect(() => {
@@ -156,7 +117,7 @@ export default function SignUp() {
       >
         <Stack spacing={8} mx={'auto'} maxW={'lg'} py={12} px={6}>
           <Stack align={'center'}>
-            <Heading fontSize={'4xl'}>Create an account</Heading>
+            <Heading fontSize={'4xl'}>Sign in your account!</Heading>
             <Text fontSize={'lg'} color={'gray.600'}>
               to enjoy all of our cool <Link color={'blue.400'}>features</Link>{' '}
               ✌️
@@ -185,7 +146,7 @@ export default function SignUp() {
                     })}
                     type='email'
                   />
-                  <Text position={'absolute'} color={'red.300'} role='alert'>
+                  <Text position={'absolute'} color={'red.400'} role='alert'>
                     {errors.email?.message}
                   </Text>
                 </FormControl>
@@ -216,20 +177,16 @@ export default function SignUp() {
                       </Button>
                     </InputRightElement>
                   </InputGroup>
-                  <Text position={'absolute'} color={'red.300'} role='alert'>
+                  <Text position={'absolute'} color={'red.400'} role='alert'>
                     {errors.password?.message}
                   </Text>
                 </FormControl>
-                <UploadFile errors={errors} register={register} />
-                <Stack spacing={8}>
+                <Stack pt={2} spacing={8}>
                   <Stack
                     direction={{ base: 'column', sm: 'row' }}
                     align={'start'}
                     justify={'space-between'}
                   >
-                    <Checkbox onChange={(e) => setRememberMe(e.target.checked)}>
-                      Remember me
-                    </Checkbox>
                     <Link color={'blue.400'}>Forgot password?</Link>
                   </Stack>
                   <Button
@@ -241,7 +198,7 @@ export default function SignUp() {
                       bg: 'blue.500',
                     }}
                   >
-                    Sign up
+                    Sign in
                   </Button>
                 </Stack>
               </Stack>

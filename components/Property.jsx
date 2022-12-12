@@ -10,8 +10,11 @@ import {
   Flex,
   Spacer,
 } from '@chakra-ui/react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
 
-const Property = ({ property }) => {
+const Property = ({ property, setLoading }) => {
+  const router = useRouter();
   let {
     id,
     name,
@@ -22,6 +25,7 @@ const Property = ({ property }) => {
     location,
     category,
     coverPhoto,
+    externalID,
   } = property;
 
   const image = coverPhoto
@@ -73,8 +77,8 @@ const Property = ({ property }) => {
         </Stack>
         <Flex mt={'.5rem'}>
           <Spacer />
-          <Button variant='solid' colorScheme='green' size='sm'>
-            Learn More
+          <Button onClick={() => setLoading(true)} variant='solid' colorScheme='green' size='sm'>
+            <Link href={`/property/${externalID}`}>Learn More</Link>
           </Button>
         </Flex>
       </Box>

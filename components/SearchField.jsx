@@ -14,13 +14,12 @@ import { BsChatText } from 'react-icons/bs';
 const SearchField = () => {
   const router = useRouter();
   const { asPath } = router;
-  
 
   // USE STATE
   const [searchTerm, setSearchTerm] = useState('');
 
   function handleSearch() {
-    router.push(`${asPath}/${searchTerm}`);
+    router.push(`search/${searchTerm}`);
   }
 
   function onKeyPress(e) {

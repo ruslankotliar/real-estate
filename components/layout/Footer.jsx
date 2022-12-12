@@ -36,6 +36,9 @@ const SocialButton = ({ children, label, href }) => {
 export default function Footer() {
   return (
     <Box
+      w={'100%'}
+      pos={'absolute'}
+      bottom={0}
       mt={'2.5rem'}
       bg={useColorModeValue('gray.50', 'gray.900')}
       color={useColorModeValue('gray.700', 'gray.200')}

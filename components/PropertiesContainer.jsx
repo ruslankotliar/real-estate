@@ -1,34 +1,58 @@
-import { Flex } from '@chakra-ui/react';
-import { useRouter } from 'next/router';
+import { Box, filter, Flex } from '@chakra-ui/react';
 import React, { useEffect, useRef, useState } from 'react';
 import Property from './Property';
+import FilterBar from './FilterBar';
+import LoadingStatus from './LoadingStatus';
+import { useRouter } from 'next/router';
 
-const PropertiesContainer = ({ properties }) => {
-  const [ScrollPos, setScrollPos] = useState(null);
+const PropertiesContainer = ({ searchProperties }) => {
+  const [scrollPos, setScrollPos] = useState(null);
+  const [applyFiltersAndScroll, setApplyFiltersAndScroll] = useState(false);
+  const [properties, setProperties] = useState(searchProperties);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { route } = router;
   const propContainerRef = useRef(null);
 
   useEffect(() => {
-    const queryLength = Object.keys(router.query).length;
-    if (queryLength > 1) {
-      window.scrollTo(0, ScrollPos);
-      // propContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (properties) {
+      if (applyFiltersAndScroll) {
+        const windowWidth = window.innerWidth;
+        console.log(windowWidth);
+        let scrollShift;
+        // responsive design improvement
+        if (windowWidth > 1170) scrollShift = 40;
+        else if (windowWidth >= 650 && windowWidth <= 1170) scrollShift = 90;
+        else if (windowWidth < 650) scrollShift = 140;
+        console.log(scrollShift);
+        window.scrollTo(0, scrollPos - scrollShift);
+      }
+      console.log('properties: ', properties);
+      setScrollPos(propContainerRef?.current.offsetTop);
     }
   }, [properties]);
 
-  useEffect(() => {
-    setScrollPos(propContainerRef?.current.offsetTop);
-  }, []);
   return (
-    <Flex
-      ref={propContainerRef}
-      flexWrap={'wrap'}
-      justifyContent={'space-evenly'}
-    >
-      {properties.map((property) => (
-        <Property property={property} key={property.id} />
-      ))}
-    </Flex>
+    <Box zIndex={1500} ref={propContainerRef}>
+      <Flex flexWrap={'wrap'} justifyContent={'space-evenly'}>
+        {properties &&
+          properties.map((property) => (
+            <Property
+              setLoading={setLoading}
+              property={property}
+              key={property.id}
+            />
+          ))}
+      </Flex>
+      {route == '/' && (
+        <FilterBar
+          setProperties={setProperties}
+          setLoading={setLoading}
+          setApplyFiltersAndScroll={setApplyFiltersAndScroll}
+        />
+      )}
+      {loading && <LoadingStatus />}
+    </Box>
   );
 };
 
