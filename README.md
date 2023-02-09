@@ -2,6 +2,7 @@
 
 ## Introduction
 This is a pet project built with Next.js, a powerful React-based framework for building high-performance web applications. The data for properties is fetched from [Bayut API](https://rapidapi.com/apidojo/api/bayut), a platform for querying real estate information.
+### [Demo](https://www.loom.com/share/1ffe045b233b487dbd4c4a584c15f6ee)
 
 ## Key Features
 - Properties are categorized as either for buying or for renting
