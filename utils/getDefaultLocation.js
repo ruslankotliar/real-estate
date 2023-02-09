@@ -38,9 +38,7 @@
 //         }
 //       }
 //       const location = `${city}, ${country}`;
-//       // console.log(city, state, country);
 //       setLocation(location);
-//       // console.log(address);
 //     },
 //     (error) => {
 //       console.error(error);

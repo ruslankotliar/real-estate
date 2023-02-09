@@ -72,12 +72,8 @@ export default function SignUp() {
 
       if (!res.ok) {
         setLoading(false);
-        console.log(error || 'Sorry! something went wrong.');
         return;
       }
-
-      console.log('File was uploaded successfully:', fileURL);
-
       return fileURL;
     } catch (e) {
       console.error(e);

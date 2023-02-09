@@ -81,10 +81,7 @@ export default function SignIn() {
         }, 3500);
       }
     } catch (e) {
-      console.log(e.message);
-
       if (e.message == '401') {
-        console.log('fasdf');
         Store.addNotification({
           title: 'Invalid credentials!',
           message: `Try again, please.`,

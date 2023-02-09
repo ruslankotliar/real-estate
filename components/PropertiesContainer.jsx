@@ -18,23 +18,19 @@ const PropertiesContainer = ({ searchProperties }) => {
     if (properties) {
       if (applyFiltersAndScroll) {
         const windowWidth = window.innerWidth;
-        console.log(windowWidth);
         let scrollShift;
         // responsive design improvement
         if (windowWidth > 1170) scrollShift = 40;
         else if (windowWidth >= 650 && windowWidth <= 1170) scrollShift = 90;
         else if (windowWidth < 650) scrollShift = 140;
-        console.log(scrollShift);
         window.scrollTo(0, scrollPos - scrollShift);
       }
-      console.log('properties: ', properties);
       setScrollPos(propContainerRef?.current.offsetTop);
     }
   }, [properties]);
 
   return (
     <Box zIndex={1500} ref={propContainerRef}>
-      {'-'.repeat(10000)}
       <Flex flexWrap={'wrap'} justifyContent={'space-evenly'}>
         {properties &&
           properties.map((property) => (

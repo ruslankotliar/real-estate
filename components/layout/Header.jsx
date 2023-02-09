@@ -59,7 +59,6 @@ function Header() {
     if (status === 'authenticated') {
       setRegData(session);
     }
-    console.log(session);
   }, [session]);
 
   const switchMode = (

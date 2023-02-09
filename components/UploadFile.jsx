@@ -13,7 +13,6 @@ const UploadFile = ({ register, errors }) => {
       setPreview(reader.result);
     };
     reader.onerror = (error) => {
-      console.log(error);
       setPreview(null);
     };
   };
