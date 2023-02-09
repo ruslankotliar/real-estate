@@ -9,18 +9,26 @@ import {
   DrawerContent,
   IconButton,
   Icon,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  ModalCloseButton,
+  AlertDialogBody,
+  AlertDialogFooter,
+  Button,
 } from '@chakra-ui/react';
 import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { filterData, getFilterValues } from '../utils/filterData';
 import { fetchFiltersRequest, baseUrl } from '../utils/fetchFiltersRequest';
+import { BiReset } from 'react-icons/bi';
 
 const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
+  const [modalIsOpen, setModalIsOpen] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [filters] = useState(filterData);
-  const [params, setParams] = useState({
-    locationExternalIDs: '5002',
-  });
+  const [params, setParams] = useState();
   const [currentScrollPos, setCurrentScrollPos] = useState(null);
   const [windowHeight, setWindowHeight] = useState(null);
   const [closedWithBtn, setClosedWithBtn] = useState(false);
@@ -34,6 +42,7 @@ const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
 
     filterTimeout = setTimeout(() => {
       setApplyFiltersAndScroll(true);
+      storeFilters(params);
       requestProperties(params);
     }, 2000);
   };
@@ -48,6 +57,25 @@ const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
       }
     });
     debounceFilter(params);
+  };
+
+  const handleResetFilters = () => {
+    if (modalIsOpen) {
+      setModalIsOpen(false);
+    }
+    setParams({
+      locationExternalIDs: '5002',
+    });
+    sessionStorage.setItem(
+      'filters',
+      JSON.stringify({
+        locationExternalIDs: '5002',
+      })
+    );
+  };
+
+  const storeFilters = (params) => {
+    sessionStorage.setItem('filters', JSON.stringify(params));
   };
 
   const requestProperties = async (params) => {
@@ -82,10 +110,52 @@ const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
   }, [currentScrollPos]);
 
   useEffect(() => {
+    setParams(
+      JSON.parse(sessionStorage.getItem('filters')) || {
+        locationExternalIDs: '5002',
+      }
+    );
     setWindowHeight(window.innerHeight);
     // default filtering
-    requestProperties(params);
+    requestProperties(
+      params || {
+        locationExternalIDs: '5002',
+      }
+    );
   }, []);
+
+  const modal = (
+    <AlertDialog isOpen={modalIsOpen} onClose={() => setModalIsOpen(false)}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader>Confirmation</AlertDialogHeader>
+          <ModalCloseButton />
+          <AlertDialogBody>Sure want to reset all filters?</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button mr={3} onClick={() => setModalIsOpen(false)}>
+              No
+            </Button>
+            <Button onClick={handleResetFilters} colorScheme='red'>
+              Yes
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
+  );
+
+  const resetButton = (
+    <IconButton
+      aria-label='Reset filters'
+      icon={<Icon height={8} width={8} as={BiReset} />}
+      pos={'fixed'}
+      top={5}
+      left={5}
+      variant={'ghost'}
+      zIndex={50}
+      onClick={() => setModalIsOpen(true)}
+    />
+  );
 
   const toggleDrawerBtn = (
     <IconButton
@@ -111,6 +181,7 @@ const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
 
   return (
     <>
+      {modal}
       {!isOpen && currentScrollPos > windowHeight * 0.5 && toggleDrawerBtn}
       <Drawer
         placement='top'
@@ -126,6 +197,7 @@ const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
       >
         <DrawerContent>
           {isOpen && toggleDrawerBtn}
+          {resetButton}
           <Flex
             color={useColorModeValue('gray.600', 'white')}
             flexWrap={'wrap'}
@@ -153,7 +225,9 @@ const FilterBar = ({ setProperties, setLoading, setApplyFiltersAndScroll }) => {
                     <option
                       value={item.value}
                       selected={
-                        params[filter.queryName] == item.value ? true : false
+                        params && params[filter.queryName] == item.value
+                          ? true
+                          : false
                       }
                       key={item.value}
                     >

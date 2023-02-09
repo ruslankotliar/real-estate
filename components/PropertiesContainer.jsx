@@ -34,6 +34,7 @@ const PropertiesContainer = ({ searchProperties }) => {
 
   return (
     <Box zIndex={1500} ref={propContainerRef}>
+      {'-'.repeat(10000)}
       <Flex flexWrap={'wrap'} justifyContent={'space-evenly'}>
         {properties &&
           properties.map((property) => (
